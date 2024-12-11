@@ -30,18 +30,23 @@ def desenhar_pacman():
 
 #fantasmas
 ze = pygame.image.load('fantasma vermelho.png')
-ze = pygame.transform.scale(ze, (22,22))
+ze = pygame.transform.scale(ze, (23,23))
 tamanho_ze = ze.get_width()
 velocidade_fantasmas = 2
 
 zezinha = pygame.image.load('fantasma azul.png')
-zezinha = pygame.transform.scale(ze, (22,22))
+zezinha = pygame.transform.scale(zezinha, (30,30))
 tamanho_zezinha = zezinha.get_width()
 velocidade_fantasmas = 2
 
+fantasmas = [
+    {"rect": pygame.Rect(largura // 2, altura // 2, tamanho_ze, tamanho_ze), "imagem": ze},
+    {"rect": pygame.Rect(largura // 2 - 40, altura // 2, tamanho_zezinha, tamanho_zezinha), "imagem": zezinha}
+]
+
 def desenhar_fantasmas():
-    tela.blit(ze, (jogador.x, jogador.y))
-    tela.blit(zezinha, (jogador.x, jogador.y))
+    for fantasma in fantasmas:
+        tela.blit(fantasma["imagem"], (fantasma["rect"].x, fantasma["rect"].y))
 
 #obstáculos
 paredes = []
@@ -193,14 +198,13 @@ while True:
         break
 
     mover_fantasmas()
-
     desenhar_pacman()
 
     # Desenhar os elementos do jogo
     for ponto in pontos:
         pygame.draw.rect(tela, branco, ponto)
     for fantasma in fantasmas:
-        pygame.draw.rect(tela, fantasma["cor"], fantasma["rect"])
+        desenhar_fantasmas()
     for parede in paredes:
         pygame.draw.rect(tela, azul, parede)
 
