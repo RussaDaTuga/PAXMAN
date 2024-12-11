@@ -1,1 +1,211 @@
+import pygame
+import sys
+import math
+
+pygame.init()
+
+# Tela
+largura = 600
+altura = 600
+tela = pygame.display.set_mode((largura, altura))
+pygame.display.set_caption("PAC-TUGA")  # aba
+
+# Cores
+preto = (0, 0, 0)
+branco = (255, 255, 255)
+amarelo = (255, 255, 0)
+azul = (0, 0, 255)
+vermelho = (255, 0, 0)
+ciano = (0, 255, 255)
+
+#utilizador(pac-man)
+pacman = pygame.image.load('pacman.png') #carrega a imagem
+pacman = pygame.transform.scale(pacman, (22,22))
+tamanho_jogador = pacman.get_width()
+jogador = pygame.Rect(20, 20, tamanho_jogador, tamanho_jogador)
+velocidade_pacman = 3
+
+def desenhar_pacman():
+    tela.blit(pacman, (jogador.x, jogador.y)) 
+
+#fantasmas
+ze = pygame.image.load('fantasma vermelho.png')
+ze = pygame.transform.scale(ze, (22,22))
+tamanho_ze = ze.get_width()
+velocidade_fantasmas = 2
+
+zezinha = pygame.image.load('fantasma azul.png')
+zezinha = pygame.transform.scale(ze, (22,22))
+tamanho_zezinha = zezinha.get_width()
+velocidade_fantasmas = 2
+
+def desenhar_fantasmas():
+    tela.blit(ze, (jogador.x, jogador.y))
+    tela.blit(zezinha, (jogador.x, jogador.y))
+
+#obstáculos
+paredes = []
+for linha in range(5):
+    for coluna in range(5):
+        x = 100 + coluna * 80
+        y = 100 + linha * 80
+        parede = pygame.Rect(x, y, 40, 40)
+        paredes.append(parede)
+
+#pontos no mapa
+pontos = []
+for linha in range(6):
+    for coluna in range(6):
+        x = 80 + coluna * 80
+        y = 80 + linha * 80
+        ponto = pygame.Rect(x, y, 10, 10)
+
+        # Verificar se os pontos não estão bugados
+        if not any(ponto.colliderect(parede) for parede in paredes):
+            pontos.append(ponto)
+
+#função para desenhar texto
+def desenhar_texto(texto, x, y, cor=branco, tamanho=36, centro=False):
+    fonte_custom = pygame.font.Font(None, tamanho)
+    imagem_texto = fonte_custom.render(texto, True, cor)
+    rect = imagem_texto.get_rect()
+    if centro:
+        rect.center = (x, y)
+    else:
+        rect.topleft = (x, y)
+    tela.blit(imagem_texto, rect)
+
+#função para mover os fantasmas
+def mover_fantasmas():
+    for fantasma in fantasmas:
+        dx = jogador.x - fantasma["rect"].x
+        dy = jogador.y - fantasma["rect"].y
+
+        direcoes = []
+        if dx > 0:
+            direcoes.append((1, 0))
+        elif dx < 0:
+            direcoes.append((-1, 0))
+        if dy > 0:
+            direcoes.append((0, 1))
+        elif dy < 0:
+            direcoes.append((0, -1))
+
+        melhor_direcao = None
+        menor_distancia = float('inf')
+
+        for direcao in direcoes:
+            nova_pos = pygame.Rect(
+                fantasma["rect"].x + direcao[0] * velocidade_fantasmas,
+                fantasma["rect"].y + direcao[1] * velocidade_fantasmas,
+                tamanho_jogador, tamanho_jogador
+            )
+            if not any(nova_pos.colliderect(parede) for parede in paredes):
+                distancia = math.hypot(jogador.x - nova_pos.x, jogador.y - nova_pos.y)
+                if distancia < menor_distancia:
+                    melhor_direcao = direcao
+                    menor_distancia = distancia
+
+        if melhor_direcao:
+            fantasma["rect"].x += melhor_direcao[0] * velocidade_fantasmas
+            fantasma["rect"].y += melhor_direcao[1] * velocidade_fantasmas
+
+#fim do jogo por vitória
+def fim_vitoria():
+    tela.fill(preto)
+    desenhar_texto("PARABÉNS!! CONSEGUISTE!", largura // 2, altura // 3, branco, 36, centro=True)
+    desenhar_texto("Pressione ENTER para continuar...", largura // 2, altura // 2, branco, 36, centro=True)
+    pygame.display.flip()
+    while True:
+        for fala in pygame.event.get():
+            if fala.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if fala.type == pygame.KEYDOWN and fala.key == pygame.K_RETURN:
+                tela.fill(preto)
+                desenhar_texto("Mas ainda não acabou...", largura // 2, altura // 2, branco, 36, centro=True)
+                pygame.display.flip()
+                pygame.time.wait(2500)
+                return
+
+# Fim do jogo por derrota
+def fim_derrota():
+    tela.fill(preto)
+    desenhar_texto("Foste apanhado por um fantasma!", largura // 2, altura // 2, vermelho, 48, centro=True)
+    pygame.display.flip()
+    pygame.time.wait(2000)
+    pygame.quit()
+    sys.exit()
+
+# Fluxo do jogo
+pontuacao = 0
+clock = pygame.time.Clock()
+
+while True:
+    tela.fill(preto)
+
+    for evento in pygame.event.get():
+        if evento.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    # Movimento do jogador
+    teclas = pygame.key.get_pressed()
+    if teclas[pygame.K_w]:
+        jogador.y -= velocidade_pacman
+    if teclas[pygame.K_s]:
+        jogador.y += velocidade_pacman
+    if teclas[pygame.K_a]:
+        jogador.x -= velocidade_pacman
+    if teclas[pygame.K_d]:
+        jogador.x += velocidade_pacman
+
+    # Limites de movimento
+    jogador.x = max(0, min(largura - tamanho_jogador, jogador.x))
+    jogador.y = max(0, min(altura - tamanho_jogador, jogador.y))
+
+    # Colisão com as paredes
+    for parede in paredes:
+        if jogador.colliderect(parede):
+            if teclas[pygame.K_w]:
+                jogador.y += velocidade_pacman
+            if teclas[pygame.K_s]:
+                jogador.y -= velocidade_pacman
+            if teclas[pygame.K_a]:
+                jogador.x += velocidade_pacman
+            if teclas[pygame.K_d]:
+                jogador.x -= velocidade_pacman
+
+    # Pontuação
+    for ponto in pontos[:]:
+        if jogador.colliderect(ponto):
+            pontos.remove(ponto)
+            pontuacao += 10
+
+    # Verificar se um fantasma tocou o jogador
+    for fantasma in fantasmas:
+        if jogador.colliderect(fantasma["rect"]):
+            fim_derrota()
+
+    # Fim do jogo por vitória
+    if not pontos:
+        fim_vitoria()
+        break
+
+    mover_fantasmas()
+
+    desenhar_pacman()
+
+    # Desenhar os elementos do jogo
+    for ponto in pontos:
+        pygame.draw.rect(tela, branco, ponto)
+    for fantasma in fantasmas:
+        pygame.draw.rect(tela, fantasma["cor"], fantasma["rect"])
+    for parede in paredes:
+        pygame.draw.rect(tela, azul, parede)
+
+    desenhar_texto(f"Pontos: {pontuacao}", 10, 10, branco, 24)
+
+    pygame.display.flip()
+    clock.tick(60)
 
